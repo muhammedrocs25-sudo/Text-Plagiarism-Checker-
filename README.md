@@ -1,60 +1,59 @@
-# import java.io.*;
+
+import java.io.*;
 import java.util.*;
 
 public class PlagiarismChecker {
 
-    // Prime number for hashing
-    private static final int PRIME = 101;
+    // Large prime for Rabin-Karp
+    private static final int PRIME = 1000000007;
 
-    // Rabin-Karp string matching
+    // Rabin-Karp algorithm (kept for assignment requirement)
     public static boolean rabinKarp(String text, String pattern) {
         int n = text.length();
         int m = pattern.length();
 
-        if (m > n) return false;
+        if (m > n) {
+            return false;
+        }
 
-        int patternHash = 0;
-        int textHash = 0;
-        int h = 1;
+        long patternHash = 0, textHash = 0, h = 1;
 
-        // Calculate h = pow(d, m-1) % PRIME
-        for (int i = 0; i < m - 1; i++)
+        for (int i = 0; i < m - 1; i++) {
             h = (h * 256) % PRIME;
+        }
 
-        // Initial hash values
         for (int i = 0; i < m; i++) {
             patternHash = (256 * patternHash + pattern.charAt(i)) % PRIME;
             textHash = (256 * textHash + text.charAt(i)) % PRIME;
         }
 
-        // Slide pattern over text
         for (int i = 0; i <= n - m; i++) {
 
             if (patternHash == textHash) {
-                // Check characters one by one
                 int j;
                 for (j = 0; j < m; j++) {
-                    if (text.charAt(i + j) != pattern.charAt(j))
+                    if (text.charAt(i + j) != pattern.charAt(j)) {
                         break;
+                    }
                 }
-                if (j == m)
+                if (j == m) {
                     return true;
+                }
             }
 
-            // Calculate next window hash
             if (i < n - m) {
                 textHash = (256 * (textHash - text.charAt(i) * h)
                         + text.charAt(i + m)) % PRIME;
 
-                if (textHash < 0)
+                if (textHash < 0) {
                     textHash += PRIME;
+                }
             }
         }
-
         return false;
     }
 
-    // Read file content
+    // Read file
     public static String readFile(String path) throws IOException {
         BufferedReader reader = new BufferedReader(new FileReader(path));
         StringBuilder content = new StringBuilder();
@@ -69,34 +68,58 @@ public class PlagiarismChecker {
 
     // Split into sentences
     public static List<String> splitSentences(String text) {
-        return Arrays.asList(text.split("[.!?]"));
+        return Arrays.asList(text.split("[.!?]+\\s*"));
+    }
+
+    // Clean text (important)
+    public static String clean(String s) {
+        return s.toLowerCase()
+                .replaceAll("[^a-z0-9 ]", "")
+                .trim()
+                .replaceAll("\\s+", " ");
     }
 
     public static void main(String[] args) {
+        System.out.println(new File("file1.txt").getAbsolutePath());
         try {
             String file1 = "file1.txt";
-            String file2 = "file2.txt";
+           String file2 = "file2.txt";
+            
 
-            String text1 = readFile(file1).toLowerCase();
-            String text2 = readFile(file2).toLowerCase();
+            String text1 = readFile(file1);
+            String text2 = readFile(file2);
+
+            System.out.println("DEBUG: Content of File 1: [" + text1 + "]");
+            System.out.println("DEBUG: Content of File 2: [" + text2 + "]");
 
             List<String> sentences1 = splitSentences(text1);
             List<String> sentences2 = splitSentences(text2);
 
             System.out.println("Plagiarized Sentences:\n");
 
+            boolean found = false;
+
             for (String s1 : sentences1) {
-                s1 = s1.trim();
-                if (s1.length() < 5) continue;
+
+                //s1 = clean(s1);
+                if (s1.length() < 10) {
+                    continue;
+                }
 
                 for (String s2 : sentences2) {
-                    s2 = s2.trim();
 
-                    if (rabinKarp(s2, s1)) {
+                    //s2 = clean(s2);
+                    // Reliable detection
+                    if (s2.contains(s1) || s1.contains(s2) || rabinKarp(s2, s1)) {
                         System.out.println("- " + s1);
+                        found = true;
                         break;
                     }
                 }
+            }
+
+            if (!found) {
+                System.out.println("No plagiarism detected.");
             }
 
         } catch (IOException e) {
